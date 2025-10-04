@@ -1,0 +1,58 @@
+Archivo: ..\process_data\training_csv.csv
+Filas: 13785
+Features num: 19 | cat: 0
+
+=== VALIDATION (15%) ===
+ROC-AUC: 0.848286
+PR-AUC : 0.882911
+Best threshold (F1-macro): 0.500 | F1: 0.801004
+
+[Matriz @thr]
+[[771   0]
+ [404 859]]
+
+[Reporte @thr]
+              precision    recall  f1-score   support
+
+         0.0      0.656     1.000     0.792       771
+         1.0      1.000     0.680     0.810      1263
+
+    accuracy                          0.801      2034
+   macro avg      0.828     0.840     0.801      2034
+weighted avg      0.870     0.801     0.803      2034
+
+
+[Referencia @0.5]
+Matriz:
+[[771   0]
+ [404 859]]
+
+Reporte:
+              precision    recall  f1-score   support
+
+         0.0      0.656     1.000     0.792       771
+         1.0      1.000     0.680     0.810      1263
+
+    accuracy                          0.801      2034
+   macro avg      0.828     0.840     0.801      2034
+weighted avg      0.870     0.801     0.803      2034
+
+
+=== FINAL TEST (15%) ===
+ROC-AUC: 0.842480
+PR-AUC : 0.883108
+threshold usado: 0.500
+Matriz @thr:
+[[761   0]
+ [433 886]]
+
+Reporte @thr:
+              precision    recall  f1-score   support
+
+         0.0      0.637     1.000     0.779       761
+         1.0      1.000     0.672     0.804      1319
+
+    accuracy                          0.792      2080
+   macro avg      0.819     0.836     0.791      2080
+weighted avg      0.867     0.792     0.794      2080
+
