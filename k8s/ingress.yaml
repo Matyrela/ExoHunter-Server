@@ -6,10 +6,10 @@ metadata:
   annotations:
     kubernetes.io/ingress.class: traefik
     cert-manager.io/cluster-issuer: letsencrypt-http
+    traefik.ingress.kubernetes.io/router.priority: "100"   # 👈 más alto
 spec:
   tls:
-    - hosts:
-        - api.exohunter.earth
+    - hosts: [ "api.exohunter.earth" ]
       secretName: exoserver-tls
   rules:
     - host: api.exohunter.earth
