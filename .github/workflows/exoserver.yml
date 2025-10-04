@@ -1,20 +1,29 @@
+name: Exoserver — build & deploy on VPS
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
 jobs:
-  build-and-deploy-on-vps:
+  build-and-deploy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
+      # Sincroniza el repo al home del usuario no-root
       - name: Sync sources to VPS
         uses: burnett01/rsync-deployments@6.0.0
         with:
           switches: -az --delete
           path: .
-          remote_path: /root/exoserver-src
+          remote_path: /home/${{ secrets.VPS_USER }}/exoserver-src
           remote_host: ${{ secrets.VPS_HOST }}
           remote_user: ${{ secrets.VPS_USER }}
           remote_key: ${{ secrets.VPS_SSH_KEY }}
 
-      - name: Build & rollout on VPS (nerdctl + kubectl)
+      # Build con nerdctl (requiere sudo pero SOLO para nerdctl) + deploy con kubeconfig limitado
+      - name: Build image and rollout in K3s
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.VPS_HOST }}
@@ -22,29 +31,19 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
             set -euo pipefail
+            cd ~/exoserver-src
 
-            # 1) instalar nerdctl si no está
-            if ! command -v nerdctl >/dev/null 2>&1; then
-              curl -fsSL https://github.com/containerd/nerdctl/releases/download/v1.7.7/nerdctl-full-1.7.7-linux-amd64.tar.gz \
-                | tar -C /usr/local -xz
-              systemctl restart k3s || true
-            fi
-
-            cd /root/exoserver-src
-
-            # 2) build en namespace k8s.io (donde k3s busca imágenes)
+            # build de imagen local para containerd de k3s
             TAG=${GITHUB_SHA}
-            nerdctl -n k8s.io build -t exoserver:${TAG} -t exoserver:latest .
+            sudo nerdctl -n k8s.io build -t exoserver:${TAG} -t exoserver:latest .
 
-            # 3) aplicar manifests (por si hay cambios)
-            KUBECONFIG=/etc/rancher/k3s/k3s.yaml kubectl apply -f k8s/
+            # aplicar manifests y actualizar Deployment usando kubeconfig limitado
+            KUBECONFIG=/home/${USER}/.kube/config-exohunter kubectl apply -f k8s/
 
-            # 4) setear la imagen local (sin registry) y esperar rollout
-            KUBECONFIG=/etc/rancher/k3s/k3s.yaml kubectl -n exohunter set image \
+            KUBECONFIG=/home/${USER}/.kube/config-exohunter kubectl -n exohunter set image \
               deploy/exoserver-deployment exoserver=exoserver:${TAG}
 
-            KUBECONFIG=/etc/rancher/k3s/k3s.yaml kubectl -n exohunter rollout status \
+            KUBECONFIG=/home/${USER}/.kube/config-exohunter kubectl -n exohunter rollout status \
               deploy/exoserver-deployment --timeout=300s
 
-            # mostrar estado
-            KUBECONFIG=/etc/rancher/k3s/k3s.yaml kubectl -n exohunter get pods -o wide
+            KUBECONFIG=/home/${USER}/.kube/config-exohunter kubectl -n exohunter get pods -o wide
