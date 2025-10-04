@@ -30,9 +30,19 @@ jobs:
           script: |
             set -euo pipefail
             USER=${USER:-${{ secrets.VPS_USER }}}
+
+            # sockets correctos en k3s
+            export CONTAINERD_ADDRESS=/run/k3s/containerd/containerd.sock
+            export BUILDKIT_HOST=unix:///run/buildkit/buildkitd.sock
+
             cd ~/exoserver-src
             TAG="${GITHUB_SHA}"
-            sudo nerdctl -n k8s.io build -t exoserver:${TAG} -t exoserver:latest .
+
+            # build en el runtime de k3s (containerd) usando buildkit
+            sudo nerdctl --address "$CONTAINERD_ADDRESS" -n k8s.io build \
+              -t exoserver:${TAG} -t exoserver:latest .
+
+            # aplicar manifests y actualizar deployment en el ns exohunter
             KUBECONFIG=/home/${USER}/.kube/config-exohunter kubectl apply -f k8s/
             KUBECONFIG=/home/${USER}/.kube/config-exohunter kubectl -n exohunter set image \
               deploy/exoserver-deployment exoserver=exoserver:${TAG}
