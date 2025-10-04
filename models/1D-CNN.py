@@ -10,7 +10,7 @@ import joblib
 import os
 
 
-def preparar_datos(csv_path='PS_2025.10.02_11.56.01.csv'):
+def preparar_datos(csv_path='training_CNN.csv'):
     df = pd.read_csv(csv_path, comment='#')
     numeric_columns = df.select_dtypes(include=[np.number]).columns.tolist()
     if 'discoverymethod' in df.columns:
@@ -54,7 +54,7 @@ def preparar_datos(csv_path='PS_2025.10.02_11.56.01.csv'):
     np.save('class_names.npy', class_names)
     return X, y_cat, class_names
 
-def entrenar_y_guardar_modelo(csv_path='PS_2025.10.02_11.56.01.csv', model_path='modelo_1dcnn.h5'):
+def entrenar_y_guardar_modelo(csv_path='training_CNN.csv', model_path='modelo_1dcnn_nuevo.h5'):
     X, y_cat, class_names = preparar_datos(csv_path)
     X_temp, X_test, y_temp, y_test = train_test_split(X, y_cat, test_size=0.15, random_state=42)
     X_train, X_val, y_train, y_val = train_test_split(X_temp, y_temp, test_size=0.1765, random_state=42)
@@ -76,7 +76,7 @@ def entrenar_y_guardar_modelo(csv_path='PS_2025.10.02_11.56.01.csv', model_path=
     print('Modelo y datos guardados.')
     return model, history
 
-def probar_modelo(model_path='modelo_1dcnn.h5', csv_path='test_data.npz'):
+def probar_modelo(model_path='modelo_1dcnn_nuevo.h5', csv_path='test_data.npz'):
     model = load_model(model_path)
     class_names = np.load('class_names.npy', allow_pickle=True)
     scaler = joblib.load('scaler.save')
