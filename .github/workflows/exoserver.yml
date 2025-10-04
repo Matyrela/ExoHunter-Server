@@ -31,19 +31,13 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
             set -euo pipefail
+            USER=${USER:-${{ secrets.VPS_USER }}}
             cd ~/exoserver-src
-
-            # build de imagen local para containerd de k3s
-            TAG=${GITHUB_SHA}
+            TAG=${{ github.sha }}
             sudo nerdctl -n k8s.io build -t exoserver:${TAG} -t exoserver:latest .
-
-            # aplicar manifests y actualizar Deployment usando kubeconfig limitado
             KUBECONFIG=/home/${USER}/.kube/config-exohunter kubectl apply -f k8s/
-
             KUBECONFIG=/home/${USER}/.kube/config-exohunter kubectl -n exohunter set image \
               deploy/exoserver-deployment exoserver=exoserver:${TAG}
-
             KUBECONFIG=/home/${USER}/.kube/config-exohunter kubectl -n exohunter rollout status \
               deploy/exoserver-deployment --timeout=300s
-
             KUBECONFIG=/home/${USER}/.kube/config-exohunter kubectl -n exohunter get pods -o wide
