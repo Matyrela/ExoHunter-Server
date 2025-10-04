@@ -80,27 +80,61 @@ def probar_modelo(model_path='modelo_1dcnn_nuevo.h5', csv_path='test_data.npz'):
     model = load_model(model_path)
     class_names = np.load('class_names.npy', allow_pickle=True)
     scaler = joblib.load('scaler.save')
+    
     if csv_path.endswith('.csv'):
         df = pd.read_csv(csv_path, comment='#')
         numeric_columns = df.select_dtypes(include=[np.number]).columns.tolist()
-        if 'discoverymethod' in df.columns:
-            if 'discoverymethod' in numeric_columns:
-                numeric_columns.remove('discoverymethod')
+        
+        # Remover columna objetivo si existe
+        if 'discoverymethod' in df.columns and 'discoverymethod' in numeric_columns:
+            numeric_columns.remove('discoverymethod')
+        
         X = df[numeric_columns]
-        threshold = 0.7
-        columns_to_keep = [col for col in X.columns if X[col].isnull().sum() / len(X) < threshold]
-        X = X[columns_to_keep]
-        row_threshold = len(X.columns) * 0.5
-        rows_to_keep = X.isnull().sum(axis=1) < row_threshold
-        X = X[rows_to_keep]
+        
+        # Reemplazar infinitos con NaN primero
+        X = X.replace([np.inf, -np.inf], np.nan)
+        
+        # Rellenar valores faltantes con mediana
         X = X.fillna(X.median())
+        
+        # Si después del fillna aún hay NaN (columnas completamente vacías), rellenar con 0
+        X = X.fillna(0)
+        
         X = X.values
-        finite_mask = np.isfinite(X).all(axis=1)
-        X = X[finite_mask]
+        
+        # Ajustar número de features de manera más inteligente
+        expected_features = scaler.n_features_in_
+        
+        if X.shape[1] > expected_features:
+            # Si hay más columnas, tomar las primeras pero avisar
+            print(f"Advertencia: CSV tiene {X.shape[1]} columnas, usando solo las primeras {expected_features}")
+            X = X[:, :expected_features]
+        elif X.shape[1] < expected_features:
+            # Si hay menos columnas, rellenar con la media de cada columna faltante del scaler
+            print(f"Advertencia: CSV tiene {X.shape[1]} columnas, esperadas {expected_features}. Rellenando con valores promedio.")
+            # En lugar de ceros, usar la media de los datos actuales para rellenar
+            mean_values = np.mean(X, axis=0)
+            overall_mean = np.mean(mean_values) if len(mean_values) > 0 else 0
+            
+            padding = np.full((X.shape[0], expected_features - X.shape[1]), overall_mean)
+            X = np.concatenate([X, padding], axis=1)
+        
+        # Validar que los datos no sean todos iguales (lo cual causaría predicciones sesgadas)
+        if np.all(X == X[0]):
+            print("Advertencia: Todos los datos son idénticos, las predicciones pueden no ser confiables")
+        
+        # Escalar y predecir
         X_scaled = scaler.transform(X)
         X_scaled = X_scaled[..., np.newaxis]
+        
+        # Hacer predicciones con probabilidades para debugging
         predictions = model.predict(X_scaled)
         predicted_classes = np.argmax(predictions, axis=1)
+        
+        # Mostrar distribución de predicciones para debugging
+        unique, counts = np.unique(predicted_classes, return_counts=True)
+        print(f"Distribución de predicciones: {dict(zip([class_names[i] for i in unique], counts))}")
+        
         return [class_names[i] for i in predicted_classes]
     else:
         data = np.load(csv_path)
