@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: exoserver-deployment
+  namespace: exohunter
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: exoserver
+  template:
+    metadata:
+      labels:
+        app: exoserver
+    spec:
+      imagePullSecrets:
+        - name: registry-cred
+      containers:
+        - name: exoserver
+          image: registry.konoba.space/exohunter/exoserver:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8000
+          env:
+            - name: UVICORN_WORKERS
+              value: "2"
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 8000
+            initialDelaySeconds: 15
+            periodSeconds: 20

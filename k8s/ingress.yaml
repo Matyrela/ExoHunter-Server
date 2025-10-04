@@ -1,0 +1,24 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: exoserver-ingress
+  namespace: exohunter
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-http
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - api.konoba.space
+      secretName: exoserver-tls
+  rules:
+    - host: api.konoba.space
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: exoserver-svc
+                port:
+                  number: 80

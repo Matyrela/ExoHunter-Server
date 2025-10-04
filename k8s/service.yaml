@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: exoserver-svc
+  namespace: exohunter
+spec:
+  selector:
+    app: exoserver
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8000
