@@ -47,7 +47,8 @@ jobs:
               --output type=image,name=exoserver:${TAG},name=exoserver:latest \
               .
 
-            KUBECONFIG=/home/${USER}/.kube/config-exohunter kubectl apply -f k8s/
+            KUBECONFIG=/home/${USER}/.kube/config-exohunter kubectl -n exohunter apply \
+              -f k8s/deploy.yaml -f k8s/service.yaml -f k8s/ingress.yaml
             KUBECONFIG=/home/${USER}/.kube/config-exohunter kubectl -n exohunter set image \
               deploy/exoserver-deployment exoserver=exoserver:${TAG}
             KUBECONFIG=/home/${USER}/.kube/config-exohunter kubectl -n exohunter rollout status \
