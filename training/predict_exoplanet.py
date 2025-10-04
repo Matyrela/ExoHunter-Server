@@ -1,26 +1,21 @@
-"""
-Predicción con el modelo entrenado LightGBM para exoplanetas.
-
-Uso:
-    python predict_exoplanet.py `
-        --model exoplanet_lgbm.pkl `
-        --csv nuevos_exoplanetas.csv `
-        --out predicciones.csv
-"""
-
 import argparse
 import joblib
 import pandas as pd
 import numpy as np
 from pathlib import Path
 from sklearn.base import BaseEstimator, TransformerMixin
-from train_exoplanet_lgbm import Log1pTransformer
+
+# Workaround para joblib + FastAPI multiproceso
+from training.train_exoplanet_lgbm import Log1pTransformer
+import sys
+sys.modules['__main__'].Log1pTransformer = Log1pTransformer
 
 
 # ---------- Script de predicción ----------
 
-def predict(model_path: Path, input_csv: Path, output_csv: Path):
+def predict(input_csv: Path):
     # 1) Cargar modelo (bundle con preprocessor + model)
+    model_path = 'training/exoplanet_lgbm.pkl'
     bundle = joblib.load(model_path)
     preprocessor = bundle["preprocessor"]
     model = bundle["model"]
@@ -49,13 +44,3 @@ def predict(model_path: Path, input_csv: Path, output_csv: Path):
         result.append((int(preds[i]), float(probs[i])))
     return result
 
-
-
-if __name__ == "__main__":
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--model", required=True, type=Path, help="Modelo .pkl entrenado")
-    ap.add_argument("--csv", required=True, type=Path, help="CSV nuevo con features")
-    ap.add_argument("--out", default="predicciones.csv", type=Path, help="Archivo de salida con predicciones")
-    args = ap.parse_args()
-
-    print(predict(args.model, args.csv, args.out))
