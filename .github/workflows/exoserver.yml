@@ -10,6 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - name: Sync sources to VPS
         uses: burnett01/rsync-deployments@6.0.0
         with:
@@ -33,24 +34,27 @@ jobs:
             set -euo pipefail
             USER=${USER:-${{ secrets.VPS_USER }}}
             export CONTAINERD_ADDRESS=/run/k3s/containerd/containerd.sock
-            export BUILDKIT_HOST=unix:///run/buildkit/buildkitd.sock
             cd ~/exoserver-src
             TAG="${GITHUB_SHA}"
 
-            CACHE_DIR="/home/${USER}/.buildkit-cache"
-            mkdir -p "$CACHE_DIR"
-
+            echo "🧱 Building image exoserver:${TAG} ..."
             sudo nerdctl --address "$CONTAINERD_ADDRESS" -n k8s.io build \
               --progress=plain \
-              --cache-from type=local,src="${CACHE_DIR}" \
-              --cache-to   type=local,dest="${CACHE_DIR}",mode=max \
-              --output type=image,name=exoserver:${TAG},name=exoserver:latest \
+              -t exoserver:${TAG} \
+              -t exoserver:latest \
               .
 
+            echo "🚀 Applying manifests..."
             KUBECONFIG=/home/${USER}/.kube/config-exohunter kubectl -n exohunter apply \
               -f k8s/deploy.yaml -f k8s/service.yaml -f k8s/ingress.yaml
+
+            echo "♻️ Updating deployment image..."
             KUBECONFIG=/home/${USER}/.kube/config-exohunter kubectl -n exohunter set image \
               deploy/exoserver-deployment exoserver=exoserver:${TAG}
+
+            echo "⏳ Waiting for rollout..."
             KUBECONFIG=/home/${USER}/.kube/config-exohunter kubectl -n exohunter rollout status \
               deploy/exoserver-deployment --timeout=300s
+
+            echo "✅ Current pods:"
             KUBECONFIG=/home/${USER}/.kube/config-exohunter kubectl -n exohunter get pods -o wide
