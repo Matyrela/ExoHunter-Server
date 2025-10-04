@@ -19,7 +19,7 @@ from train_exoplanet_lgbm import Log1pTransformer
 
 # ---------- Script de predicción ----------
 
-def main(model_path: Path, input_csv: Path, output_csv: Path):
+def predict(model_path: Path, input_csv: Path, output_csv: Path):
     # 1) Cargar modelo (bundle con preprocessor + model)
     bundle = joblib.load(model_path)
     preprocessor = bundle["preprocessor"]
@@ -43,15 +43,12 @@ def main(model_path: Path, input_csv: Path, output_csv: Path):
     probs = model.predict_proba(X_t)[:, 1]
     preds = (probs >= 0.5).astype(int)
 
-    # 6) Adjuntar resultados
-    df_out = df.copy()
-    df_out["pred_prob"] = probs
-    df_out["pred_label"] = preds
+    # 6) Devolver resultados en lista
+    result = []
+    for i in range(len(probs)):
+        result.append((int(preds[i]), float(probs[i])))
+    return result
 
-    # 7) Guardar resultados
-    df_out.to_csv(output_csv, index=False)
-    print(f"[OK] Predicciones guardadas en: {output_csv}")
-    print(df_out[["pred_prob", "pred_label"]].head())
 
 
 if __name__ == "__main__":
@@ -61,4 +58,4 @@ if __name__ == "__main__":
     ap.add_argument("--out", default="predicciones.csv", type=Path, help="Archivo de salida con predicciones")
     args = ap.parse_args()
 
-    main(args.model, args.csv, args.out)
+    print(predict(args.model, args.csv, args.out))
