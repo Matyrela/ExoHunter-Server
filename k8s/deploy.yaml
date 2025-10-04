@@ -4,7 +4,7 @@ metadata:
   name: exoserver-deployment
   namespace: exohunter
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: exoserver
@@ -13,11 +13,9 @@ spec:
       labels:
         app: exoserver
     spec:
-      imagePullSecrets:
-        - name: registry-cred
       containers:
         - name: exoserver
-          image: registry.konoba.space/exohunter/exoserver:latest
+          image: exoserver:latest
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8000

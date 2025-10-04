@@ -4,15 +4,15 @@ metadata:
   name: exoserver-ingress
   namespace: exohunter
   annotations:
+    kubernetes.io/ingress.class: traefik
     cert-manager.io/cluster-issuer: letsencrypt-http
 spec:
-  ingressClassName: traefik
   tls:
     - hosts:
-        - api.konoba.space
+        - api.exohunter.earth
       secretName: exoserver-tls
   rules:
-    - host: api.konoba.space
+    - host: api.exohunter.earth
       http:
         paths:
           - path: /
