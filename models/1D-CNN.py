@@ -7,6 +7,7 @@ from tensorflow.keras.models import Sequential, load_model
 from tensorflow.keras.layers import Conv1D, MaxPooling1D, Flatten, Dense, Dropout
 from tensorflow.keras.utils import to_categorical
 import joblib
+import os
 
 
 def preparar_datos(csv_path='PS_2025.10.02_11.56.01.csv'):
@@ -75,20 +76,35 @@ def entrenar_y_guardar_modelo(csv_path='PS_2025.10.02_11.56.01.csv', model_path=
     print('Modelo y datos guardados.')
     return model, history
 
-def probar_modelo(model_path='modelo_1dcnn.h5', test_data_path='test_data.npz'):
+def probar_modelo(model_path='modelo_1dcnn.h5', csv_path='test_data.npz'):
     model = load_model(model_path)
-    data = np.load(test_data_path)
-    X_test, y_test = data['X_test'], data['y_test']
     class_names = np.load('class_names.npy', allow_pickle=True)
-    loss, acc = model.evaluate(X_test, y_test)
-    print(f'Precisión en test: {acc:.2f}')
-    y_pred = model.predict(X_test)
-    y_test_labels = np.argmax(y_test, axis=1)
-    y_pred_labels = np.argmax(y_pred, axis=1)
-    print('Matriz de confusión:')
-    print(confusion_matrix(y_test_labels, y_pred_labels))
-    print('\nReporte de clasificación:')
-    unique_test_labels = np.unique(y_test_labels)
-    class_names_present = [str(class_names[i]) for i in unique_test_labels]
-    print(classification_report(y_test_labels, y_pred_labels, labels=unique_test_labels, target_names=class_names_present))
-    print(f'Precisión final: {accuracy_score(y_test_labels, y_pred_labels):.4f}')
+    scaler = joblib.load('scaler.save')
+    if csv_path.endswith('.csv'):
+        df = pd.read_csv(csv_path, comment='#')
+        numeric_columns = df.select_dtypes(include=[np.number]).columns.tolist()
+        if 'discoverymethod' in df.columns:
+            if 'discoverymethod' in numeric_columns:
+                numeric_columns.remove('discoverymethod')
+        X = df[numeric_columns]
+        threshold = 0.7
+        columns_to_keep = [col for col in X.columns if X[col].isnull().sum() / len(X) < threshold]
+        X = X[columns_to_keep]
+        row_threshold = len(X.columns) * 0.5
+        rows_to_keep = X.isnull().sum(axis=1) < row_threshold
+        X = X[rows_to_keep]
+        X = X.fillna(X.median())
+        X = X.values
+        finite_mask = np.isfinite(X).all(axis=1)
+        X = X[finite_mask]
+        X_scaled = scaler.transform(X)
+        X_scaled = X_scaled[..., np.newaxis]
+        predictions = model.predict(X_scaled)
+        predicted_classes = np.argmax(predictions, axis=1)
+        return [class_names[i] for i in predicted_classes]
+    else:
+        data = np.load(csv_path)
+        X_test = data['X_test']
+        predictions = model.predict(X_test)
+        predicted_classes = np.argmax(predictions, axis=1)
+        return [class_names[i] for i in predicted_classes]
