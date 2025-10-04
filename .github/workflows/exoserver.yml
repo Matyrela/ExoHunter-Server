@@ -10,8 +10,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      # Sincroniza el repo al home del usuario no-root
       - name: Sync sources to VPS
         uses: burnett01/rsync-deployments@6.0.0
         with:
@@ -22,18 +20,18 @@ jobs:
           remote_user: ${{ secrets.VPS_USER }}
           remote_key: ${{ secrets.VPS_SSH_KEY }}
 
-      # Build con nerdctl (requiere sudo pero SOLO para nerdctl) + deploy con kubeconfig limitado
       - name: Build image and rollout in K3s
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
+          envs: GITHUB_SHA
           script: |
             set -euo pipefail
             USER=${USER:-${{ secrets.VPS_USER }}}
             cd ~/exoserver-src
-            TAG=${{ github.sha }}
+            TAG="${GITHUB_SHA}"
             sudo nerdctl -n k8s.io build -t exoserver:${TAG} -t exoserver:latest .
             KUBECONFIG=/home/${USER}/.kube/config-exohunter kubectl apply -f k8s/
             KUBECONFIG=/home/${USER}/.kube/config-exohunter kubectl -n exohunter set image \
