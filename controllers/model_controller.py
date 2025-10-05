@@ -46,7 +46,6 @@ async def upload_csv(file: UploadFile = File(...)):
 
         # Obtener predicciones
         df = ensure_hostname(df)
-        df = rename_df(df)
         gradient_boost = predict_exoplanet.predict(df)
         cnn = ONED_CNN.probar_modelo(csv_path=tmp_path)
 
