@@ -1,58 +1,58 @@
-Archivo: ..\process_data\training_csv.csv
-Filas: 14362
-Features num: 19 | cat: 0
+Archivo: process_data\training_csv.csv
+Filas: 8407
+Features num: 7 | cat: 0
 
 === VALIDATION (15%) ===
-ROC-AUC: 0.985651
-PR-AUC : 0.993110
-Best threshold (F1-macro): 0.400 | F1: 0.927633
+ROC-AUC: 0.948140
+PR-AUC : 0.917010
+Best threshold (F1-macro): 0.500 | F1: 0.871724
 
 [Matriz @thr]
-[[ 644   72]
- [  67 1399]]
+[[671  90]
+ [ 65 429]]
 
 [Reporte @thr]
               precision    recall  f1-score   support
 
-         0.0      0.906     0.899     0.903       716
-         1.0      0.951     0.954     0.953      1466
+         0.0      0.912     0.882     0.896       761
+         1.0      0.827     0.868     0.847       494
 
-    accuracy                          0.936      2182
-   macro avg      0.928     0.927     0.928      2182
-weighted avg      0.936     0.936     0.936      2182
+    accuracy                          0.876      1255
+   macro avg      0.869     0.875     0.872      1255
+weighted avg      0.878     0.876     0.877      1255
 
 
 [Referencia @0.5]
 Matriz:
-[[ 661   55]
- [  91 1375]]
+[[671  90]
+ [ 65 429]]
 
 Reporte:
               precision    recall  f1-score   support
 
-         0.0      0.879     0.923     0.901       716
-         1.0      0.962     0.938     0.950      1466
+         0.0      0.912     0.882     0.896       761
+         1.0      0.827     0.868     0.847       494
 
-    accuracy                          0.933      2182
-   macro avg      0.920     0.931     0.925      2182
-weighted avg      0.934     0.933     0.933      2182
+    accuracy                          0.876      1255
+   macro avg      0.869     0.875     0.872      1255
+weighted avg      0.878     0.876     0.877      1255
 
 
 === FINAL TEST (15%) ===
-ROC-AUC: 0.986476
-PR-AUC : 0.992217
-threshold usado: 0.400
+ROC-AUC: 0.951109
+PR-AUC : 0.919248
+threshold usado: 0.500
 Matriz @thr:
-[[ 712   65]
- [  54 1307]]
+[[703  72]
+ [ 77 416]]
 
 Reporte @thr:
               precision    recall  f1-score   support
 
-         0.0      0.930     0.916     0.923       777
-         1.0      0.953     0.960     0.956      1361
+         0.0      0.901     0.907     0.904       775
+         1.0      0.852     0.844     0.848       493
 
-    accuracy                          0.944      2138
-   macro avg      0.941     0.938     0.940      2138
-weighted avg      0.944     0.944     0.944      2138
+    accuracy                          0.882      1268
+   macro avg      0.877     0.875     0.876      1268
+weighted avg      0.882     0.882     0.882      1268
 

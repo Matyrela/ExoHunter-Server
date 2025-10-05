@@ -74,12 +74,12 @@ def build_preprocessor(num_cols, cat_cols) -> ColumnTransformer:
     log1p_idx = [num_cols.index(c) for c in LOG1P_CANDIDATES if c in num_cols]
 
     numeric_transformer = Pipeline(steps=[
-        ("imputer", SimpleImputer(strategy="median")),
+        # ("imputer", SimpleImputer(strategy="median")),  # Comentado para dejar nulos en numéricas
         ("log1p", Log1pTransformer(log1p_idx)),
     ])
 
     categorical_transformer = Pipeline(steps=[
-        ("imputer", SimpleImputer(strategy="most_frequent")),
+        # ("imputer", SimpleImputer(strategy="most_frequent")),  # Comentado para dejar nulos en categóricas
         ("encoder", OrdinalEncoder(handle_unknown="use_encoded_value", unknown_value=-1)),
     ])
 
@@ -117,7 +117,6 @@ def pick_columns(df: pd.DataFrame, label_col: str, group_col: Optional[str] = No
 
 
 def split_data_three(X, y, group_series=None, seed=42):
-    """Divide en train (70%), val (15%), test (15%), respetando grupos si se proveen."""
     if group_series is not None:
         gss1 = GroupShuffleSplit(n_splits=1, test_size=0.3, random_state=seed)
         train_idx, temp_idx = next(gss1.split(X, y, groups=group_series))
@@ -142,7 +141,6 @@ def split_data_three(X, y, group_series=None, seed=42):
 
 
 def best_threshold(y_true, proba, beta=1.0):
-    """Busca umbral que maximiza F1-macro en valid."""
     ths = np.linspace(0.05, 0.95, 19)
     scores = []
     for t in ths:
@@ -183,6 +181,13 @@ def train(
             group_series = raw_groups
     else:
         group_series = None
+
+    # Eliminar columnas no deseadas si existen
+    drop_cols = [
+        'sy_snum', 'sy_pnum', 'pl_orbsmax', 'pl_orbeccen', 'pl_bmasse', 'ttv_flag',
+        'st_mass', 'st_met', 'sy_dist', 'sy_vmag', 'sy_kmag', 'sy_gaiamag'
+    ]
+    df = df.drop(columns=[c for c in drop_cols if c in df.columns], errors='ignore')
 
     # Columnas
     num_cols, cat_cols = pick_columns(df, label_col=label_col, group_col=group_col)

@@ -21,10 +21,10 @@ def predict(df: pd.DataFrame):
 
     # 2) Seleccionar columnas que el modelo conoce
     features = preprocessor.feature_names_in_.tolist()
-    missing = [c for c in features if c not in df.columns]
-    if missing:
-        raise SystemExit(f"El CSV de entrada no tiene estas columnas necesarias: {missing}")
-
+    # Agregar columnas faltantes como np.nan
+    for c in features:
+        if c not in df.columns:
+            df[c] = np.nan
     X = df[features].copy()
 
     # 3) Transformar con preprocessor
@@ -32,11 +32,10 @@ def predict(df: pd.DataFrame):
 
     # 4) Predicciones
     probs = model.predict_proba(X_t)[:, 1]
-    preds = (probs >= 0.5).astype(int)
+    preds = (probs >= 0.4).astype(int)
 
     # 5) Devolver resultados en lista
     result = []
     for i in range(len(probs)):
         result.append((int(preds[i]), float(probs[i])))
     return result
-

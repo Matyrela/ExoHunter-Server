@@ -10,7 +10,7 @@ def label_from_disposition(value: str):
     u = str(value).upper().strip()
     if u in ["FP", "FALSE POSITIVE"]:
         return 0
-    if u in ["KP", "CONFIRMED", "PUBLISHED CONFIRMED", "KNOWN PLANET"]:
+    if u in ["KP", "CONFIRMED", "PUBLISHED CONFIRMED", "KNOWN PLANET", "CP"]:
         return 1
     if "CANDIDATE" in u or u in ["PC", "APC", "CAND"]:
         return None
@@ -35,7 +35,7 @@ def find_col(case_insensitive_cols, candidates):
 
 def ensure_hostname(df: pd.DataFrame) -> pd.DataFrame:
     host_col = find_col(df.columns, ["hostname"])
-    koi_col  = find_col(df.columns, ["koi_name", "kepoi_name", "koi name", "kepoi name"])
+    koi_col  = find_col(df.columns, ["koi_name", "kepoi_name", "koi name", "kepoi name", "toi"])
     if host_col is None and koi_col is not None:
         df["hostname"] = df[koi_col]
         print(f"[HOSTNAME] No había 'hostname'. Se creó desde '{koi_col}'.")
