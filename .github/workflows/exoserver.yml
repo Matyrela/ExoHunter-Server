@@ -1,9 +1,14 @@
 name: Exoserver — build & deploy on VPS
 
+
 on:
   push:
     branches: [ "main" ]
   workflow_dispatch:
+
+concurrency:
+  group: exoserver-deploy-main
+  cancel-in-progress: true
 
 jobs:
   build-and-deploy:
