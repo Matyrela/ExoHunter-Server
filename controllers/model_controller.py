@@ -56,10 +56,10 @@ async def upload_csv(file: UploadFile = File(...)):
             pred, prob = gb_tuple
             result.append({
                 "id": ids[idx],
-                "clase": cnn_class,
-                "prediccion": int(pred),
-                "probabilidad": float(prob),
-                "columna_id": id_col
+                "class": cnn_class,
+                "prediction": int(pred),
+                "probability": float(prob),
+                "column_id": id_col
             })
 
     except Exception as e:
