@@ -3,6 +3,7 @@ import pandas as pd
 from io import StringIO
 from models import ONED_CNN
 from training import predict_exoplanet
+from process_data.filter import rename_df, ensure_hostname
 import tempfile
 
 router = APIRouter()
@@ -16,29 +17,52 @@ async def upload_csv(file: UploadFile = File(...)):
     #    raise HTTPException(status_code=400, detail="El archivo no tiene extensión .csv")
 
     try:
-        # Guardar el archivo subido en un archivo temporal
+        # Guardar el archivo temporalmente
         contents = await file.read()
-        with tempfile.NamedTemporaryFile(delete=False, suffix='.csv') as tmp:
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".csv") as tmp:
             tmp.write(contents)
             tmp_path = tmp.name
-        # Leer el CSV para obtener los ids reales
-        df = pd.read_csv(tmp_path, comment='#')
-        if 'id_name' not in df.columns:
-            raise HTTPException(status_code=400, detail="El CSV no contiene la columna 'id_name'")
-        ids = df['id_name'].tolist()
-        # Obtener predicciones de ambos modelos
-        gradientBoost = predict_exoplanet.predict(input_csv=tmp_path)
+
+        # Leer CSV
+        df = pd.read_csv(tmp_path, comment="#")
+
+        # Normalizar nombres de columnas
+        df = rename_df(df)
+
+        # Buscar columna de identificación válida
+        id_col = None
+        for col in ["hostname", "kepler_name", "tid"]:
+            if col in df.columns:
+                id_col = col
+                break
+
+        if not id_col:
+            raise HTTPException(
+                status_code=400,
+                detail="El CSV debe contener al menos una de las siguientes columnas: 'hostname', 'kepler_name' o 'tid'."
+            )
+
+        ids = df[id_col].astype(str).tolist()
+
+        # Obtener predicciones
+        df = ensure_hostname(df)
+        df = rename_df(df)
+        gradient_boost = predict_exoplanet.predict(df)
         cnn = ONED_CNN.probar_modelo(csv_path=tmp_path)
-        # Unificar resultados usando el id_name real
+
+        # Combinar resultados
         result = []
-        for idx, (cnn_class, gb_tuple) in enumerate(zip(cnn, gradientBoost)):
-            prediccion, probabilidad = gb_tuple
+        for idx, (cnn_class, gb_tuple) in enumerate(zip(cnn, gradient_boost)):
+            pred, prob = gb_tuple
             result.append({
                 "id": ids[idx],
                 "clase": cnn_class,
-                "prediccion": int(prediccion),
-                "probabilidad": float(probabilidad)
+                "prediccion": int(pred),
+                "probabilidad": float(prob),
+                "columna_id": id_col
             })
+
     except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Error al leer el CSV: {e}")
+        raise HTTPException(status_code=400, detail=f"Error al procesar el CSV: {e}")
+
     return result

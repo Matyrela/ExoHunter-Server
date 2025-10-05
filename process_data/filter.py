@@ -51,10 +51,26 @@ def ensure_hostname(df: pd.DataFrame) -> pd.DataFrame:
             print(df.columns)
     return df
 
+def rename_df(df: pd.DataFrame) -> pd.DataFrame:
+    rename_map = {
+        "koi_period": "pl_orbper",
+        "koi_prad": "pl_rade",
+        "koi_teq": "pl_eqt",
+        "koi_insol": "pl_insol",
+        "koi_steff": "st_teff",
+        "koi_srad": "st_rad",
+        "koi_slogg": "st_logg",
+        "koi_kepmag": "sy_vmag",
+    }
+    found = [c for c in rename_map if c in df.columns]
+    if found:
+        df = df.rename(columns={c: rename_map[c] for c in found})
+        print(f"[NORMALIZAR] Renombradas columnas KOI → estándar: {found}")
+    return df
+
 def process_one_csv(path, dedupe_by=None):
     print(f"\n[CARGA] Leyendo: {path}")
 
-    # ✅ Limpieza robusta: eliminar comentarios con espacios antes de '#'
     with open(path, "r", encoding="utf-8") as f:
         lines = [line for line in f if not line.lstrip().startswith("#")]
     df = pd.read_csv(StringIO("".join(lines)), low_memory=False)
@@ -71,20 +87,7 @@ def process_one_csv(path, dedupe_by=None):
     # Normalizar/crear hostname desde KOI name si hace falta
     df = ensure_hostname(df)
 
-    rename_map = {
-        "koi_period": "pl_orbper",
-        "koi_prad": "pl_rade",
-        "koi_teq": "pl_eqt",
-        "koi_insol": "pl_insol",
-        "koi_steff": "st_teff",
-        "koi_srad": "st_rad",
-        "koi_slogg": "st_logg",
-        "koi_kepmag": "sy_vmag",
-    }
-    found = [c for c in rename_map if c in df.columns]
-    if found:
-        df = df.rename(columns={c: rename_map[c] for c in found})
-        print(f"[NORMALIZAR] Renombradas columnas KOI → estándar: {found}")
+    df = rename_df(df)
 
     # Detectar columna de disposición/soltype
     disp_col = find_col(df.columns, [
