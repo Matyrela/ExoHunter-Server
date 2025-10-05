@@ -172,11 +172,10 @@ def train(
     if y.isna().all():
         raise SystemExit("La columna de etiquetas está vacía o mal definida.")
 
-    # groups robusto: si hay NaN en group_col, asignar un grupo único por fila
     if group_col and group_col in df.columns:
         raw_groups = df[group_col]
         if raw_groups.isna().any():
-            filler = "__row_" + df.index.astype(str)
+            filler = pd.Series("__row_" + df.index.astype(str), index=df.index)
             group_series = raw_groups.astype(object).copy()
             group_series.loc[raw_groups.isna()] = filler.loc[raw_groups.isna()]
             print(f"[Groups] {raw_groups.isna().sum()} filas sin '{group_col}' recibieron grupos únicos por fila.")

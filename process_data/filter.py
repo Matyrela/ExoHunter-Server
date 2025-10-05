@@ -1,18 +1,21 @@
 import pandas as pd
 import argparse
+from io import StringIO
 
 def label_from_disposition(value: str):
-    """Etiqueta: Confirmed/Published Confirmed => 1; False Positive/Refuted/Not Dispositioned => 0; Candidate => None (descarta)."""
+    """Etiqueta universal para KOI/K2/TOI:
+    Confirmed/Known => 1; False Positive/Refuted => 0; Candidates => None (descarta)."""
     if pd.isna(value):
         return None
     u = str(value).upper().strip()
-    if "CANDIDATE" in u:
-        return None
-    if "CONFIRMED" in u or "PUBLISHED CONFIRMED" in u:
-        return 1
-    if "FALSE POSITIVE" in u or "REFUTED" in u or "NOT DISPOSITIONED" in u:
+    if u in ["FP", "FALSE POSITIVE"]:
         return 0
+    if u in ["KP", "CONFIRMED", "PUBLISHED CONFIRMED", "KNOWN PLANET"]:
+        return 1
+    if "CANDIDATE" in u or u in ["PC", "APC", "CAND"]:
+        return None
     return None
+
 
 FEATURES = [
     "sy_snum","sy_pnum","pl_orbper","pl_orbsmax",
@@ -23,7 +26,6 @@ FEATURES = [
 ]
 
 def find_col(case_insensitive_cols, candidates):
-    """Devuelve el nombre real de la primera columna candidata encontrada (case-insensitive)."""
     lowmap = {c.lower().strip(): c for c in case_insensitive_cols}
     for cand in candidates:
         k = cand.lower().strip()
@@ -32,8 +34,6 @@ def find_col(case_insensitive_cols, candidates):
     return None
 
 def ensure_hostname(df: pd.DataFrame) -> pd.DataFrame:
-    """Garantiza que exista 'hostname'. Si no existe, lo crea desde KOI name.
-       Si existe pero tiene NaN, rellena con KOI name cuando haya."""
     host_col = find_col(df.columns, ["hostname"])
     koi_col  = find_col(df.columns, ["koi_name", "kepoi_name", "koi name", "kepoi name"])
     if host_col is None and koi_col is not None:
@@ -48,15 +48,18 @@ def ensure_hostname(df: pd.DataFrame) -> pd.DataFrame:
     else:
         if host_col is None:
             print("[HOSTNAME] No se encontró 'hostname' ni KOI name para crearlo.")
-        # si host_col existe y no hay koi_col, no hacemos nada
+            print(df.columns)
     return df
 
 def process_one_csv(path, dedupe_by=None):
     print(f"\n[CARGA] Leyendo: {path}")
-    df = pd.read_csv(path, comment="#", low_memory=False)
+
+    # ✅ Limpieza robusta: eliminar comentarios con espacios antes de '#'
+    with open(path, "r", encoding="utf-8") as f:
+        lines = [line for line in f if not line.lstrip().startswith("#")]
+    df = pd.read_csv(StringIO("".join(lines)), low_memory=False)
     print(f"[INFO] Filas iniciales: {len(df)} | Columnas: {len(df.columns)}")
 
-    # Filtrado default_flag por archivo (si existe)
     default_col = find_col(df.columns, ["default_flag"])
     if default_col:
         before = len(df)
@@ -68,10 +71,29 @@ def process_one_csv(path, dedupe_by=None):
     # Normalizar/crear hostname desde KOI name si hace falta
     df = ensure_hostname(df)
 
+    rename_map = {
+        "koi_period": "pl_orbper",
+        "koi_prad": "pl_rade",
+        "koi_teq": "pl_eqt",
+        "koi_insol": "pl_insol",
+        "koi_steff": "st_teff",
+        "koi_srad": "st_rad",
+        "koi_slogg": "st_logg",
+        "koi_kepmag": "sy_vmag",
+    }
+    found = [c for c in rename_map if c in df.columns]
+    if found:
+        df = df.rename(columns={c: rename_map[c] for c in found})
+        print(f"[NORMALIZAR] Renombradas columnas KOI → estándar: {found}")
+
     # Detectar columna de disposición/soltype
-    disp_col = find_col(df.columns, ["disposition", "archive_disposition", "archive disposition", "soltype", "koi_disposition"])
+    disp_col = find_col(df.columns, [
+        "disposition", "archive_disposition", "archive disposition",
+        "soltype", "koi_disposition", "tfopwg_disp"
+    ])
     if not disp_col:
-        raise SystemExit("❌ No se encontró ninguna columna de disposición ['disposition', 'archive_disposition', 'soltype'].")
+        print(f"[SKIP] No se encontró columna de disposición válida en {path}. Se omite este archivo.")
+        return pd.DataFrame()
 
     # Crear label y filtrar candidatos / NaN
     df["label"] = df[disp_col].apply(label_from_disposition)
@@ -108,12 +130,12 @@ def process_one_csv(path, dedupe_by=None):
 
 def main(input_csvs, output_csv, dedupe_by=None):
     parts = [process_one_csv(p, dedupe_by=dedupe_by) for p in input_csvs]
+    parts = [p for p in parts if not p.empty]
     if not parts:
         raise SystemExit("No se pudo procesar ningún archivo.")
     df = pd.concat(parts, ignore_index=True)
     print(f"\n[COMBINE] Total concatenado: {len(df)} filas | Columnas: {len(df.columns)}")
 
-    # Dedupe global por clave (opcional)
     if dedupe_by:
         keys = [c.strip() for c in dedupe_by.split(",") if c.strip() and c in df.columns]
         if keys:
@@ -123,13 +145,11 @@ def main(input_csvs, output_csv, dedupe_by=None):
         else:
             print("[DEDUPE-KEY global] Sin claves válidas presentes en el combinado.")
 
-    # Dedupe exacto global
     b = len(df)
     df = df.drop_duplicates(keep="first")
     if len(df) != b:
         print(f"[DEDUPE-EXACT global] → {len(df)} (descartadas: {b - len(df)})")
 
-    # Resumen final
     if "label" in df.columns:
         print("[RESUMEN] Label counts:", df["label"].value_counts(dropna=False).to_dict())
 
